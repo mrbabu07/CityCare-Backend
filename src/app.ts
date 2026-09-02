@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
-
+import authRoutes from "./routes/auth.routes";
 import { notFoundHandler, globalErrorHandler } from "./middlewares/errorHandler";
 
 const app: Application = express();
@@ -32,8 +32,7 @@ app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: "Server is healthy", data: {} });
 });
 
-// এখানে পরে API রুটগুলো mount করব, যেমন:
-// app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/auth", authRoutes);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
