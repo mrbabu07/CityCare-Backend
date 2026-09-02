@@ -6,4 +6,5 @@ package.json
 .claude
 .cursor
 .vscode
+.env
 
