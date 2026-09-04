@@ -1,7 +1,7 @@
 import { prisma } from "../config/prisma";
 import { hashPassword, comparePassword } from "../utils/password";
-import { generateAccessToken, generateRefreshToken } from "../utils/jwt";
-import {AppError} from "../utils/AppError";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt";import {AppError} from "../utils/AppError";
+import { verifyRefreshToken } from "../utils/jwt";
 
 export const registerUser = async (data: {
     name: string;
@@ -61,4 +61,29 @@ export const loginUser = async (data: { email: string; password: string}) => {
     const {password, ...userWithoutPassword} = user;
 
     return { user: userWithoutPassword, accessToken, refreshToken };
+}
+
+export const refreshAccessToken = async (token: string) => {
+    let decoded;
+    try{
+        decoded = verifyRefreshToken(token);
+
+    }
+    catch {
+        throw new AppError("Invalid or expired refresh token, Please login again", 401);
+
+    }
+
+    const user = await prisma.user.findUnique({
+        where: {id: decoded.userId}
+    });
+
+    if(!user || !user.isActive || user.deletedAt) {
+        throw new AppError("User not found or inactive", 404);
+
+    }
+
+    const accessToken = generateAccessToken({userId: user.id, role: user.role})
+
+    return {accessToken};
 }
