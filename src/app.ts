@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import authRoutes from "./routes/auth.routes";
 import { notFoundHandler, globalErrorHandler } from "./middlewares/errorHandler";
 import userRoutes from "./routes/user.routes";
+import departmentRoutes from "./routes/department.routes";
 
 const app: Application = express();
 
@@ -35,7 +36,7 @@ app.get("/health", (req: Request, res: Response) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
-
+app.use("/api/v1/departments", departmentRoutes);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
