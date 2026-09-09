@@ -9,6 +9,7 @@ import { notFoundHandler, globalErrorHandler } from "./middlewares/errorHandler"
 import userRoutes from "./routes/user.routes";
 import departmentRoutes from "./routes/department.routes";
 import categoryRoutes from "./routes/category.routes";
+import complaintRoutes from "./routes/complaint.routes";
 
 const app: Application = express();
 
@@ -39,7 +40,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/departments", departmentRoutes);
 app.use("/api/v1/categories", categoryRoutes);
-
+app.use("/api/v1/complaints", complaintRoutes);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
