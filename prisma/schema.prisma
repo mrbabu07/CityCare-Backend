@@ -30,6 +30,8 @@ model User {
   complaintsAssigned Complaint[] @relation("StaffComplaints")
 
   @@index([role])
+  complaintStatusHistories ComplaintStatusHistory[]
+    feedbacks Feedback[]
 }
 
 model Department {
@@ -111,5 +113,45 @@ model Complaint {
   @@index([status])
   @@index([citizenId])
   @@index([departmentId])
+  statusHistory ComplaintStatusHistory[]
+    attachments   Attachment[]
+  feedback      Feedback?
   @@index([assignedToId])
+  
+}
+
+model ComplaintStatusHistory {
+  id          String           @id @default(uuid())
+  complaintId String
+  complaint   Complaint        @relation(fields: [complaintId], references: [id])
+  fromStatus  ComplaintStatus?
+  toStatus    ComplaintStatus
+  changedById String
+  changedBy   User             @relation(fields: [changedById], references: [id])
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([complaintId])
+}
+
+model Attachment {
+  id          String    @id @default(uuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  url         String
+  type        String
+  createdAt   DateTime  @default(now())
+
+  @@index([complaintId])
+}
+
+model Feedback {
+  id          String    @id @default(uuid())
+  complaintId String    @unique
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  citizenId   String
+  citizen     User      @relation(fields: [citizenId], references: [id])
+  rating      Int
+  comment     String?
+  createdAt   DateTime  @default(now())
 }
