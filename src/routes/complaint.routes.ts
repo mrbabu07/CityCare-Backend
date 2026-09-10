@@ -7,6 +7,7 @@ import {
   updateStatusSchema,
   assignComplaintSchema,
 } from "../validations/complaint.validation";
+import feedbackRoutes from "./feedback.routes";
 
 const router = Router();
 
@@ -31,5 +32,7 @@ router.patch(
 );
 
 router.delete("/:id", protect, authorize("ADMIN"), remove);
+router.use("/:complaintId/feedback", feedbackRoutes);
+
 
 export default router;
