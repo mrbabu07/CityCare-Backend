@@ -11,6 +11,8 @@ import departmentRoutes from "./routes/department.routes";
 import categoryRoutes from "./routes/category.routes";
 import complaintRoutes from "./routes/complaint.routes";
 import adminRoutes from "./routes/admin.routes";
+import paymentRoutes from "./routes/payment.routes";
+
 
 
 const app: Application = express();
@@ -25,6 +27,8 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
+app.use(express.urlencoded({ extended: true }));
+
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -44,6 +48,8 @@ app.use("/api/v1/departments", departmentRoutes);
 app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/complaints", complaintRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/payments", paymentRoutes);
+
 
 
 app.use(notFoundHandler);
