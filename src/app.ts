@@ -10,6 +10,8 @@ import userRoutes from "./routes/user.routes";
 import departmentRoutes from "./routes/department.routes";
 import categoryRoutes from "./routes/category.routes";
 import complaintRoutes from "./routes/complaint.routes";
+import adminRoutes from "./routes/admin.routes";
+
 
 const app: Application = express();
 
@@ -41,6 +43,8 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/departments", departmentRoutes);
 app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/complaints", complaintRoutes);
+app.use("/api/v1/admin", adminRoutes);
+
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
