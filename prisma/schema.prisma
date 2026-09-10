@@ -32,6 +32,7 @@ model User {
   @@index([role])
   complaintStatusHistories ComplaintStatusHistory[]
     feedbacks Feedback[]
+      auditLogs AuditLog[]
 }
 
 model Department {
@@ -154,4 +155,18 @@ model Feedback {
   rating      Int
   comment     String?
   createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
 }
