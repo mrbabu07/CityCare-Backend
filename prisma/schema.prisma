@@ -33,6 +33,7 @@ model User {
   complaintStatusHistories ComplaintStatusHistory[]
     feedbacks Feedback[]
       auditLogs AuditLog[]
+        payments  Payment[]
 }
 
 model Department {
@@ -81,6 +82,13 @@ enum ComplaintPriority {
   URGENT
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 model Complaint {
   id          String            @id @default(uuid())
   title       String
@@ -117,6 +125,7 @@ model Complaint {
   statusHistory ComplaintStatusHistory[]
     attachments   Attachment[]
   feedback      Feedback?
+    payment       Payment?
   @@index([assignedToId])
   
 }
@@ -169,4 +178,21 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([actorId])
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  complaintId String        @unique
+  complaint   Complaint     @relation(fields: [complaintId], references: [id])
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  amount      Int
+  currency    String        @default("BDT")
+  status      PaymentStatus @default(PENDING)
+  provider    String
+  providerRef String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
 }
