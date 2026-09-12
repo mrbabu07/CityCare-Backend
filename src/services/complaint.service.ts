@@ -1,6 +1,8 @@
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { ComplaintStatus, ComplaintPriority, Prisma } from "@prisma/client";
+import { sendEmail } from "../utils/email";
+
 
 export const createComplaint = async (
   citizenId: string,
@@ -173,6 +175,20 @@ export const updateComplaintStatus = async (
         note,
       },
     });
+
+    if (newStatus === ComplaintStatus.RESOLVED || newStatus === ComplaintStatus.REJECTED) {
+    const citizen = await prisma.user.findUnique({ where: { id: complaint.citizenId } });
+    if (citizen) {
+      sendEmail(
+        citizen.email,
+        `Your complaint has been ${newStatus.toLowerCase()}`,
+        `<p>Hi ${citizen.name},</p>
+         <p>Your complaint "<strong>${complaint.title}</strong>" has been marked as <strong>${newStatus}</strong>.</p>
+         ${note ? `<p>Note: ${note}</p>` : ""}
+         <p>Thank you for using CityCare.</p>`
+      );
+    }
+  }
 
     return updatedComplaint;
   });
