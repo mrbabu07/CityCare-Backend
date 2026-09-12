@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { catchAsync } from "../middlewares/errorHandler";
 import { sendSuccess } from "../utils/apiResponse";
 import { registerUser, loginUser, refreshAccessToken } from "../services/auth.service";
+import { registerUser, loginUser, refreshAccessToken, googleLogin } from "../services/auth.service";
+
 
 export const register = catchAsync(async (req: Request, res: Response) => {
   const result = await registerUser(req.body);
@@ -21,4 +23,10 @@ export const refresh = catchAsync(async (req: Request, res: Response) => {
 
 export const logout = catchAsync(async (req: Request, res: Response) => {
   return sendSuccess(res, {}, "Logged out successfully");
+});
+
+export const googleAuth = catchAsync(async (req: Request, res: Response) => {
+  const { idToken } = req.body;
+  const result = await googleLogin(idToken);
+  return sendSuccess(res, result, "Google login successful");
 });
