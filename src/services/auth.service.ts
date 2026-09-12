@@ -1,89 +1,129 @@
 import { prisma } from "../config/prisma";
 import { hashPassword, comparePassword } from "../utils/password";
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt";import {AppError} from "../utils/AppError";
-import { verifyRefreshToken } from "../utils/jwt";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import { AppError } from "../utils/AppError";
+import { OAuth2Client } from "google-auth-library";
 
-export const registerUser = async (data: {
-    name: string;
-    email: string;
-    password: string;
-    phone: string;
-}) => {
-    const existingUser = await prisma.user.findUnique({
-        where: {email: data.email}
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+export const googleLogin = async (idToken: string) => {
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
+    payload = ticket.getPayload();
+  } catch {
+    throw new AppError("Invalid Google token", 401);
+  }
 
-    if (existingUser) {
-        throw new AppError("User already exists", 409);
-    }
+  if (!payload || !payload.email) {
+    throw new AppError("Could not retrieve information from Google", 401);
+  }
 
-    const hashedPassword = await hashPassword(data.password);
+  let user = await prisma.user.findUnique({ where: { email: payload.email } });
 
-    const user = await prisma.user.create({
-        data: {
-            name: data.name,
-            email: data.email,
-            password: hashedPassword,
-            phone: data.phone
-        }
+  if (!user) {
+    const randomPassword = await hashPassword(Math.random().toString(36) + Date.now());
+    user = await prisma.user.create({
+      data: {
+        name: payload.name || "Google User",
+        email: payload.email,
+        password: randomPassword,
+      },
     });
+  }
 
-    const accessToken = generateAccessToken({userId: user.id, role: user.role});
-    const refreshToken = generateRefreshToken({userId: user.id, role: user.role});
+  if (!user.isActive) {
+    throw new AppError("Your account has been deactivated", 403);
+  }
 
-    const {password, ...userWithoutPassword} = user;
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
 
-    return { user: userWithoutPassword, accessToken, refreshToken };
+  const { password, ...userWithoutPassword } = user;
+
+  return { user: userWithoutPassword, accessToken, refreshToken };
 };
 
-export const loginUser = async (data: { email: string; password: string}) => {
-    const user = await prisma.user.findUnique({
-        where: {email: data.email}
-    })
+export const registerUser = async (data: {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+}) => {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
 
-    if (!user) {
-        throw new AppError("Invalid email or password", 401);
-    }
+  if (existingUser) {
+    throw new AppError("User already exists", 409);
+  }
 
-    const isPasswordValid = await comparePassword(data.password, user.password);
+  const hashedPassword = await hashPassword(data.password);
 
-    if(!isPasswordValid) {
-        throw new AppError("Invalid email or password", 401);
-    }
+  const user = await prisma.user.create({
+    data: {
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      phone: data.phone,
+    },
+  });
 
-    if(!user.isActive) {
-        throw new AppError("User account is inactive", 403);
-    }
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
 
-    const accessToken = generateAccessToken({userId: user.id, role: user.role});
-    const refreshToken = generateRefreshToken({userId: user.id, role: user.role});
+  const { password, ...userWithoutPassword } = user;
 
-    const {password, ...userWithoutPassword} = user;
+  return { user: userWithoutPassword, accessToken, refreshToken };
+};
 
-    return { user: userWithoutPassword, accessToken, refreshToken };
-}
+export const loginUser = async (data: { email: string; password: string }) => {
+  const user = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (!user) {
+    throw new AppError("Invalid email or password", 401);
+  }
+
+  const isPasswordValid = await comparePassword(data.password, user.password);
+
+  if (!isPasswordValid) {
+    throw new AppError("Invalid email or password", 401);
+  }
+
+  if (!user.isActive) {
+    throw new AppError("User account is inactive", 403);
+  }
+
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+
+  const { password, ...userWithoutPassword } = user;
+
+  return { user: userWithoutPassword, accessToken, refreshToken };
+};
 
 export const refreshAccessToken = async (token: string) => {
-    let decoded;
-    try{
-        decoded = verifyRefreshToken(token);
+  let decoded;
+  try {
+    decoded = verifyRefreshToken(token);
+  } catch {
+    throw new AppError("Invalid or expired refresh token, Please login again", 401);
+  }
 
-    }
-    catch {
-        throw new AppError("Invalid or expired refresh token, Please login again", 401);
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.userId },
+  });
 
-    }
+  if (!user || !user.isActive || user.deletedAt) {
+    throw new AppError("User not found or inactive", 404);
+  }
 
-    const user = await prisma.user.findUnique({
-        where: {id: decoded.userId}
-    });
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
 
-    if(!user || !user.isActive || user.deletedAt) {
-        throw new AppError("User not found or inactive", 404);
-
-    }
-
-    const accessToken = generateAccessToken({userId: user.id, role: user.role})
-
-    return {accessToken};
-}
+  return { accessToken };
+};
