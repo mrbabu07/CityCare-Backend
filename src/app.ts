@@ -45,6 +45,18 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
+app.get("/", (req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome to the CityCare API",
+    data: {
+      health: "/health",
+      apiBase: "/api/v1",
+      documentation: "https://github.com/mrbabu07/CityCare-Backend/blob/main/docs/openapi.yaml",
+    },
+  });
+});
+
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: "Server is healthy", data: {} });
 });
