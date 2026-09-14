@@ -24,6 +24,8 @@ The API runs at `http://localhost:5000`; health check: `GET /health`. Import [do
 
 Complaint workflow: `SUBMITTED -> UNDER_REVIEW -> ASSIGNED -> IN_PROGRESS -> RESOLVED -> CLOSED`. Rejection and reassignment are restricted by the state machine.
 
+Refresh tokens are stored only as hashes. `POST /api/v1/auth/refresh` rotates the refresh token, and `POST /api/v1/auth/logout` accepts `{ "refreshToken": "..." }` to revoke that session.
+
 ## Quality checks
 
 Run `npm test`. All errors use `{ success: false, message, errors }`; successes use `{ success: true, message, data }`.

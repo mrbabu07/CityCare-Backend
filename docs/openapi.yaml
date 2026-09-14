@@ -42,8 +42,9 @@ paths:
   /auth/logout:
     post:
       tags: [Auth]
-      summary: End client session
+      summary: Revoke the supplied refresh-token session
       security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [refreshToken], properties: { refreshToken: { type: string } } } } } }
       responses: { '200': { $ref: '#/components/responses/Success' } }
   /users/me:
     get:

@@ -26,14 +26,28 @@ model User {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  complaintsCreated  Complaint[] @relation("CitizenComplaints")
-  complaintsAssigned Complaint[] @relation("StaffComplaints")
+  complaintsCreated        Complaint[]              @relation("CitizenComplaints")
+  complaintsAssigned       Complaint[]              @relation("StaffComplaints")
+  complaintStatusHistories ComplaintStatusHistory[]
+  feedbacks                Feedback[]
+  auditLogs                AuditLog[]
+  payments                 Payment[]
+  refreshTokens            RefreshToken[]
 
   @@index([role])
-  complaintStatusHistories ComplaintStatusHistory[]
-    feedbacks Feedback[]
-      auditLogs AuditLog[]
-        payments  Payment[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
 }
 
 model Department {
@@ -115,19 +129,18 @@ model Complaint {
   slaDueAt   DateTime?
   resolvedAt DateTime?
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  deletedAt     DateTime?
+  statusHistory ComplaintStatusHistory[]
+  attachments   Attachment[]
+  feedback      Feedback?
+  payment       Payment?
 
   @@index([status])
   @@index([citizenId])
   @@index([departmentId])
-  statusHistory ComplaintStatusHistory[]
-    attachments   Attachment[]
-  feedback      Feedback?
-    payment       Payment?
   @@index([assignedToId])
-  
 }
 
 model ComplaintStatusHistory {

@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
+import { randomUUID } from "node:crypto";
 
-export interface JwtPayload {
+export interface JwtPayload extends jwt.JwtPayload {
   userId: string;
   role: string;
 }
@@ -14,6 +15,7 @@ export const generateAccessToken = (payload: JwtPayload): string => {
 export const generateRefreshToken = (payload: JwtPayload): string => {
   return jwt.sign(payload, process.env.JWT_REFRESH_SECRET as string, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+    jwtid: randomUUID(),
   } as jwt.SignOptions);
 };
 

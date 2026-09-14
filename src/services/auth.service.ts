@@ -3,8 +3,29 @@ import { hashPassword, comparePassword } from "../utils/password";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import { AppError } from "../utils/AppError";
 import { OAuth2Client } from "google-auth-library";
+import { createHash } from "node:crypto";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
+const createSession = async (user: { id: string; role: string }) => {
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  const decoded = verifyRefreshToken(refreshToken);
+
+  if (!decoded.exp) throw new AppError("Refresh token expiry is missing", 500);
+
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: hashToken(refreshToken),
+      userId: user.id,
+      expiresAt: new Date(decoded.exp * 1000),
+    },
+  });
+
+  return { accessToken, refreshToken };
+};
 
 export const googleLogin = async (idToken: string) => {
   let payload;
@@ -39,12 +60,11 @@ export const googleLogin = async (idToken: string) => {
     throw new AppError("Your account has been deactivated", 403);
   }
 
-  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
-  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  const tokens = await createSession(user);
 
   const { password, ...userWithoutPassword } = user;
 
-  return { user: userWithoutPassword, accessToken, refreshToken };
+  return { user: userWithoutPassword, ...tokens };
 };
 
 export const registerUser = async (data: {
@@ -72,12 +92,11 @@ export const registerUser = async (data: {
     },
   });
 
-  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
-  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  const tokens = await createSession(user);
 
   const { password, ...userWithoutPassword } = user;
 
-  return { user: userWithoutPassword, accessToken, refreshToken };
+  return { user: userWithoutPassword, ...tokens };
 };
 
 export const loginUser = async (data: { email: string; password: string }) => {
@@ -99,12 +118,11 @@ export const loginUser = async (data: { email: string; password: string }) => {
     throw new AppError("User account is inactive", 403);
   }
 
-  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
-  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  const tokens = await createSession(user);
 
   const { password, ...userWithoutPassword } = user;
 
-  return { user: userWithoutPassword, accessToken, refreshToken };
+  return { user: userWithoutPassword, ...tokens };
 };
 
 export const refreshAccessToken = async (token: string) => {
@@ -113,6 +131,19 @@ export const refreshAccessToken = async (token: string) => {
     decoded = verifyRefreshToken(token);
   } catch {
     throw new AppError("Invalid or expired refresh token, Please login again", 401);
+  }
+
+  const storedToken = await prisma.refreshToken.findUnique({
+    where: { tokenHash: hashToken(token) },
+  });
+
+  if (
+    !storedToken ||
+    storedToken.userId !== decoded.userId ||
+    storedToken.revokedAt ||
+    storedToken.expiresAt <= new Date()
+  ) {
+    throw new AppError("Refresh token is invalid or has been revoked", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -124,6 +155,40 @@ export const refreshAccessToken = async (token: string) => {
   }
 
   const accessToken = generateAccessToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  const nextDecoded = verifyRefreshToken(refreshToken);
+  const nextExpiry = nextDecoded.exp;
+  if (!nextExpiry) throw new AppError("Refresh token expiry is missing", 500);
 
-  return { accessToken };
+  await prisma.$transaction(async (tx) => {
+    const revoked = await tx.refreshToken.updateMany({
+      where: { id: storedToken.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    if (revoked.count !== 1) {
+      throw new AppError("Refresh token has already been used", 401);
+    }
+
+    await tx.refreshToken.create({
+      data: {
+        tokenHash: hashToken(refreshToken),
+        userId: user.id,
+        expiresAt: new Date(nextExpiry * 1000),
+      },
+    });
+  });
+
+  return { accessToken, refreshToken };
+};
+
+export const revokeRefreshToken = async (token: string, userId: string) => {
+  await prisma.refreshToken.updateMany({
+    where: {
+      tokenHash: hashToken(token),
+      userId,
+      revokedAt: null,
+    },
+    data: { revokedAt: new Date() },
+  });
 };

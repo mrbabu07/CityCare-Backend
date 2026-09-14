@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../middlewares/errorHandler";
 import { sendSuccess } from "../utils/apiResponse";
-import { registerUser, loginUser, refreshAccessToken, googleLogin } from "../services/auth.service";
+import { registerUser, loginUser, refreshAccessToken, revokeRefreshToken, googleLogin } from "../services/auth.service";
 
 
 export const register = catchAsync(async (req: Request, res: Response) => {
@@ -21,6 +21,7 @@ export const refresh = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const logout = catchAsync(async (req: Request, res: Response) => {
+  await revokeRefreshToken(req.body.refreshToken, req.user!.userId);
   return sendSuccess(res, {}, "Logged out successfully");
 });
 
