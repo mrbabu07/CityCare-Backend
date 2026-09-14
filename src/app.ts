@@ -16,11 +16,18 @@ import paymentRoutes from "./routes/payment.routes";
 
 
 const app: Application = express();
+const allowedOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("Origin is not allowed by CORS"));
+    },
     credentials: true,
   })
 );

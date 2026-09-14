@@ -21,7 +21,10 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
       throw new AppError("You are not logged in. Please log in to continue.", 401);
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.slice(7).trim();
+    if (!token) {
+      throw new AppError("Bearer token is required.", 401);
+    }
 
     // ২. টোকেন যাচাই করা
     const decoded = verifyAccessToken(token);

@@ -1,8 +1,8 @@
 export class AppError extends Error {
     statusCode: number;
-    errors: unknwon[];
+    errors: unknown[];
 
-    constructor(message: string, statusCode = 400, errors: unknwon[]= []){
+    constructor(message: string, statusCode = 400, errors: unknown[] = []){
         super(message);
         this.statusCode = statusCode;
         this.errors = errors;

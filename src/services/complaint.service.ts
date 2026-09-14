@@ -26,7 +26,8 @@ export const createComplaint = async (
 
   const slaDueAt = new Date(Date.now() + category.slaHours * 60 * 60 * 1000);
 
-  const complaint = await prisma.complaint.create({
+  return prisma.$transaction(async (tx) => {
+  const complaint = await tx.complaint.create({
     data: {
       title: data.title,
       description: data.description,
@@ -40,7 +41,7 @@ export const createComplaint = async (
       slaDueAt,
     },
   });
-  await prisma.complaintStatusHistory.create({
+  await tx.complaintStatusHistory.create({
     data: {
       complaintId: complaint.id,
       toStatus: ComplaintStatus.SUBMITTED,
@@ -49,6 +50,7 @@ export const createComplaint = async (
     },
   });
   return complaint;
+  });
 };
 export const getComplaintById = async (id: string) => {
   const complaint = await prisma.complaint.findFirst({
@@ -69,6 +71,20 @@ export const getComplaintById = async (id: string) => {
   }
 
   return complaint;
+};
+
+export const assertComplaintAccess = (
+  complaint: { citizenId: string; assignedToId: string | null },
+  user: { userId: string; role: string },
+) => {
+  const canAccess =
+    user.role === "ADMIN" ||
+    (user.role === "CITIZEN" && complaint.citizenId === user.userId) ||
+    (user.role === "STAFF" && complaint.assignedToId === user.userId);
+
+  if (!canAccess) {
+    throw new AppError("You do not have permission to access this complaint", 403);
+  }
 };
 
 export const getComplaints = async (params: {
@@ -176,6 +192,16 @@ export const updateComplaintStatus = async (
       },
     });
 
+    await tx.auditLog.create({
+      data: {
+        actorId: changedById,
+        action: "COMPLAINT_STATUS_CHANGE",
+        entityType: "Complaint",
+        entityId: complaintId,
+        metadata: { fromStatus: complaint.status, toStatus: newStatus },
+      },
+    });
+
     if (newStatus === ComplaintStatus.RESOLVED || newStatus === ComplaintStatus.REJECTED) {
     const citizen = await prisma.user.findUnique({ where: { id: complaint.citizenId } });
     if (citizen) {
@@ -227,13 +253,23 @@ export const assignStaffToComplaint = async (
       data: { assignedToId: staffId, status: ComplaintStatus.ASSIGNED },
     });
 
-    await tx.complainStatusHistory.create({
+    await tx.complaintStatusHistory.create({
       data: {
         complaintId,
         fromStatus: complaint.status,
         toStatus: ComplaintStatus.ASSIGNED,
         changedById,
         note: `Assigned to staff: ${staff.name}`,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: changedById,
+        action: "COMPLAINT_ASSIGNED",
+        entityType: "Complaint",
+        entityId: complaintId,
+        metadata: { staffId },
       },
     });
 

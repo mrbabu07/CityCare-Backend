@@ -6,20 +6,22 @@ import {
   createComplaintSchema,
   updateStatusSchema,
   assignComplaintSchema,
+  complaintListSchema,
 } from "../validations/complaint.validation";
+import { idParamSchema } from "../validations/common.validation";
 import feedbackRoutes from "./feedback.routes";
 
 const router = Router();
 
 router.post("/", protect, authorize("CITIZEN"), validateRequest(createComplaintSchema), create);
-router.get("/", protect, getAll);
-router.get("/:id", protect, getOne);
+router.get("/", protect, validateRequest(complaintListSchema), getAll);
+router.get("/:id", protect, validateRequest(idParamSchema), getOne);
 
 router.patch(
   "/:id/status",
   protect,
   authorize("STAFF", "ADMIN"),
-  validateRequest(updateStatusSchema),
+  validateRequest(updateStatusSchema.and(idParamSchema)),
   updateStatus
 );
 
@@ -31,7 +33,7 @@ router.patch(
   assign
 );
 
-router.delete("/:id", protect, authorize("ADMIN"), remove);
+router.delete("/:id", protect, authorize("ADMIN"), validateRequest(idParamSchema), remove);
 router.use("/:complaintId/feedback", feedbackRoutes);
 
 

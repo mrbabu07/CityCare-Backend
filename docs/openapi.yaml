@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: CityCare API
+  version: 1.0.0
+  description: City complaint and service-request backend. Successful responses use success/message/data; errors use success/message/errors.
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local
+tags:
+  - name: Auth
+  - name: Users
+  - name: Departments
+  - name: Categories
+  - name: Complaints
+  - name: Payments
+  - name: Admin
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register citizen
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Register' } } } }
+      responses: { '201': { $ref: '#/components/responses/Success' }, '400': { $ref: '#/components/responses/Error' } }
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Login' } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' }, '401': { $ref: '#/components/responses/Error' } }
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Login with a Google ID token
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [idToken], properties: { idToken: { type: string } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' }, '401': { $ref: '#/components/responses/Error' } }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [refreshToken], properties: { refreshToken: { type: string } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: End client session
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current profile
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    patch:
+      tags: [Users]
+      summary: Update current profile
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { name: { type: string }, phone: { type: string } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /users:
+    get:
+      tags: [Users]
+      summary: List users (admin)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { $ref: '#/components/responses/Success' }, '403': { $ref: '#/components/responses/Error' } }
+  /users/{id}/role:
+    patch:
+      tags: [Users]
+      summary: Change user role (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [role], properties: { role: { $ref: '#/components/schemas/Role' } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' }, '403': { $ref: '#/components/responses/Error' } }
+  /departments:
+    get:
+      tags: [Departments]
+      summary: List departments
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Departments]
+      summary: Create department (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/DepartmentInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /departments/{id}:
+    get: { tags: [Departments], summary: Get department, security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+    patch: { tags: [Departments], summary: Update department (admin), security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/DepartmentInput' } } } }, responses: { '200': { $ref: '#/components/responses/Success' } } }
+    delete: { tags: [Departments], summary: Soft-delete department (admin), security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+  /categories:
+    get: { tags: [Categories], summary: List categories, security: [{ bearerAuth: [] }], parameters: [{ name: departmentId, in: query, schema: { type: string, format: uuid } }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+    post:
+      tags: [Categories]
+      summary: Create category (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /categories/{id}:
+    get: { tags: [Categories], summary: Get category, security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+    patch: { tags: [Categories], summary: Update category (admin), security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInput' } } } }, responses: { '200': { $ref: '#/components/responses/Success' } } }
+    delete: { tags: [Categories], summary: Soft-delete category (admin), security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+  /complaints:
+    get:
+      tags: [Complaints]
+      summary: List role-scoped complaints with pagination, filtering and search
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ComplaintStatus' } }
+        - { name: departmentId, in: query, schema: { type: string, format: uuid } }
+        - { name: search, in: query, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Complaints]
+      summary: Submit complaint (citizen)
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ComplaintInput' } } } }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /complaints/{id}:
+    get: { tags: [Complaints], summary: Get an authorized complaint, security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/Success' }, '403': { $ref: '#/components/responses/Error' } } }
+    delete: { tags: [Complaints], summary: Soft-delete complaint (admin), security: [{ bearerAuth: [] }], parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+  /complaints/{id}/status:
+    patch:
+      tags: [Complaints]
+      summary: Apply a valid status transition (assigned staff/admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { $ref: '#/components/schemas/ComplaintStatus' }, note: { type: string } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' }, '400': { $ref: '#/components/responses/Error' } }
+  /complaints/{id}/assign:
+    patch:
+      tags: [Complaints]
+      summary: Assign active staff (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [staffId], properties: { staffId: { type: string, format: uuid } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /complaints/{complaintId}/feedback:
+    post:
+      tags: [Complaints]
+      summary: Submit feedback for own resolved complaint
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: complaintId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [rating], properties: { rating: { type: integer, minimum: 1, maximum: 5 }, comment: { type: string } } } } } }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /payments/initiate:
+    post:
+      tags: [Payments]
+      summary: Create SSLCommerz session for own complaint
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [complaintId], properties: { complaintId: { type: string, format: uuid } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /payments/{complaintId}/status:
+    get: { tags: [Payments], summary: Get authorized payment status, security: [{ bearerAuth: [] }], parameters: [{ name: complaintId, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+  /payments/webhook:
+    post: { tags: [Payments], summary: SSLCommerz IPN callback with server-side validation, responses: { '200': { description: IPN accepted } } }
+  /admin/dashboard-stats:
+    get: { tags: [Admin], summary: Dashboard statistics (admin), security: [{ bearerAuth: [] }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+  /admin/audit-logs:
+    get: { tags: [Admin], summary: Paginated audit logs (admin), security: [{ bearerAuth: [] }], parameters: [{ name: page, in: query, schema: { type: integer } }, { name: limit, in: query, schema: { type: integer } }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    Role: { type: string, enum: [CITIZEN, STAFF, ADMIN] }
+    ComplaintStatus: { type: string, enum: [SUBMITTED, UNDER_REVIEW, ASSIGNED, IN_PROGRESS, RESOLVED, REJECTED, CLOSED] }
+    Register: { type: object, required: [name, email, password], properties: { name: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 6 }, phone: { type: string } } }
+    Login: { type: object, required: [email, password], properties: { email: { type: string, format: email }, password: { type: string } } }
+    DepartmentInput: { type: object, required: [name], properties: { name: { type: string }, description: { type: string } } }
+    CategoryInput: { type: object, required: [name, departmentId], properties: { name: { type: string }, departmentId: { type: string, format: uuid }, slaHours: { type: integer, minimum: 1 } } }
+    ComplaintInput: { type: object, required: [title, description, categoryId, address], properties: { title: { type: string }, description: { type: string }, categoryId: { type: string, format: uuid }, address: { type: string }, latitude: { type: number }, longitude: { type: number }, priority: { type: string, enum: [LOW, MEDIUM, HIGH, URGENT] } } }
+    SuccessEnvelope: { type: object, required: [success, message, data], properties: { success: { type: boolean, example: true }, message: { type: string }, data: {} } }
+    ErrorEnvelope: { type: object, required: [success, message, errors], properties: { success: { type: boolean, example: false }, message: { type: string }, errors: { type: array, items: {} } } }
+  responses:
+    Success: { description: Successful response, content: { application/json: { schema: { $ref: '#/components/schemas/SuccessEnvelope' } } } }
+    Error: { description: Structured error response, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }

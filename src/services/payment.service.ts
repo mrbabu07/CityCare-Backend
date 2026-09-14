@@ -2,11 +2,12 @@ import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { PaymentStatus } from "@prisma/client";
 
-const SSLCommerzPayment = require("sslcommerz-lts");
-
 const store_id = process.env.SSLCOMMERZ_STORE_ID as string;
 const store_passwd = process.env.SSLCOMMERZ_STORE_PASSWORD as string;
 const is_live = process.env.SSLCOMMERZ_IS_LIVE === "true";
+const sslCommerzBaseUrl = is_live
+  ? "https://securepay.sslcommerz.com"
+  : "https://sandbox.sslcommerz.com";
 
 const PRIORITY_FEE_BDT = 100; 
 
@@ -64,52 +65,106 @@ export const initiatePayment = async (complaintId: string, userId: string) => {
     cus_phone: complaint.citizen.phone || "01700000000",
   };
 
-  const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
-  const apiResponse = await sslcz.init(data);
+  const response = await fetch(`${sslCommerzBaseUrl}/gwprocess/v4/api.php`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      ...Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value)])),
+      store_id,
+      store_passwd,
+    }),
+  });
+  const apiResponse = await response.json() as { GatewayPageURL?: string; failedreason?: string };
 
-  if (!apiResponse?.GatewayPageURL) {
-    throw new AppError("Failed to initiate payment session", 502);
+  if (!response.ok || !apiResponse.GatewayPageURL) {
+    throw new AppError(apiResponse.failedreason || "Failed to initiate payment session", 502);
   }
 
   return { paymentUrl: apiResponse.GatewayPageURL, paymentId: payment.id };
 };
 
-export const verifyAndUpdatePayment = async (
-  paymentId: string,
-  status: "success" | "fail" | "cancel"
-) => {
+export const verifySuccessfulPayment = async (paymentId: string, validationId: string) => {
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
 
   if (!payment) {
     throw new AppError("Payment not found", 404);
   }
 
-  if (status === "success") {
-    await prisma.$transaction([
-      prisma.payment.update({
-        where: { id: paymentId },
-        data: { status: PaymentStatus.PAID },
-      }),
-      prisma.complaint.update({
-        where: { id: payment.complaintId },
-        data: { priority: "URGENT" },
-      }),
-    ]);
-  } else {
-    await prisma.payment.update({
-      where: { id: paymentId },
-      data: { status: PaymentStatus.FAILED },
-    });
+  if (payment.status === PaymentStatus.PAID) {
+    return payment;
   }
 
-  return { status };
+  if (!validationId) {
+    throw new AppError("Missing SSLCommerz validation ID", 400);
+  }
+
+  const query = new URLSearchParams({
+    val_id: validationId,
+    store_id,
+    store_passwd,
+    v: "1",
+    format: "json",
+  });
+  const response = await fetch(
+    `${sslCommerzBaseUrl}/validator/api/validationserverAPI.php?${query}`,
+  );
+  const validation = await response.json() as {
+    status?: string;
+    tran_id?: string;
+    currency?: string;
+    amount?: string;
+  };
+  const validStatuses = ["VALID", "VALIDATED"];
+  const amountMatches = Number(validation?.amount) === payment.amount;
+
+  if (
+    !response.ok ||
+    !validation.status ||
+    !validStatuses.includes(validation.status) ||
+    validation?.tran_id !== payment.id ||
+    validation?.currency !== payment.currency ||
+    !amountMatches
+  ) {
+    throw new AppError("Payment verification failed", 400);
+  }
+
+  const [updatedPayment] = await prisma.$transaction([
+    prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: PaymentStatus.PAID,
+        providerRef: validationId,
+      },
+    }),
+    prisma.complaint.update({
+      where: { id: payment.complaintId },
+      data: { priority: "URGENT" },
+    }),
+  ]);
+
+  return updatedPayment;
 };
 
-export const getPaymentStatus = async (complaintId: string) => {
+export const markPaymentFailed = async (paymentId: string) => {
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) throw new AppError("Payment not found", 404);
+  if (payment.status === PaymentStatus.PAID) return payment;
+
+  return prisma.payment.update({
+    where: { id: paymentId },
+    data: { status: PaymentStatus.FAILED },
+  });
+};
+
+export const getPaymentStatus = async (complaintId: string, userId: string, role: string) => {
   const payment = await prisma.payment.findUnique({ where: { complaintId } });
 
   if (!payment) {
     throw new AppError("No payment found for this complaint", 404);
+  }
+
+  if (role !== "ADMIN" && payment.userId !== userId) {
+    throw new AppError("You do not have permission to view this payment", 403);
   }
 
   return payment;

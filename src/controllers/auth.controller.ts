@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../middlewares/errorHandler";
 import { sendSuccess } from "../utils/apiResponse";
-import { registerUser, loginUser, refreshAccessToken } from "../services/auth.service";
 import { registerUser, loginUser, refreshAccessToken, googleLogin } from "../services/auth.service";
 
 

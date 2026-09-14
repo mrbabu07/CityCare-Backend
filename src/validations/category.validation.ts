@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const categoryListSchema = z.object({
+  query: z.object({
+    departmentId: z.string().uuid("Invalid department ID").optional(),
+  }),
+});
+
 export const createCategorySchema = z.object({
   body: z.object({
     name: z.string().min(2, "Category name is required"),

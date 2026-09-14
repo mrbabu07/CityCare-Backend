@@ -36,6 +36,6 @@ export const updateMe = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const changeUserRole = catchAsync(async (req: Request, res: Response) => {
-  const user = await updateUserRole(req.params.id, req.body.role, req.user!.userId);
+  const user = await updateUserRole(req.params.id as string, req.body.role, req.user!.userId);
   return sendSuccess(res, user, "User role updated successfully");
 });

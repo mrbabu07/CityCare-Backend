@@ -8,7 +8,7 @@ export const createComplaintSchema = z.object({
         address: z.string().min(5, "address must be at least 5 characters long"),
         latitude: z.number().optional(),
         longitude: z.number().optional(),
-        priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'], "priority must be one of 'LOW', 'MEDIUM', 'HIGH', or 'URGENT'").optional(),
+        priority: z.enum(['LOW', 'MEDIUM', 'HIGH'], "URGENT priority requires a verified payment").optional(),
     })
 });
 
@@ -29,7 +29,18 @@ export const updateStatusSchema = z.object({
 });
 
 export const assignComplaintSchema = z.object({
+    params: z.object({ id: z.string().uuid("Invalid complaint ID") }),
     body: z.object({
         staffId: z.string().uuid("staffId must be a valid UUID"),
     })
 })
+
+export const complaintListSchema = z.object({
+    query: z.object({
+        page: z.coerce.number().int().positive().optional(),
+        limit: z.coerce.number().int().positive().max(100).optional(),
+        status: z.enum(["SUBMITTED", "UNDER_REVIEW", "ASSIGNED", "IN_PROGRESS", "RESOLVED", "REJECTED", "CLOSED"]).optional(),
+        departmentId: z.string().uuid("Invalid department ID").optional(),
+        search: z.string().trim().min(1).max(100).optional(),
+    }),
+});

@@ -21,16 +21,16 @@ export const getAll = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getOne = catchAsync(async (req: Request, res: Response) => {
-  const category = await getCategoryById(req.params.id);
+  const category = await getCategoryById(req.params.id as string);
   return sendSuccess(res, category, "Category fetched successfully");
 });
 
 export const update = catchAsync(async (req: Request, res: Response) => {
-  const category = await updateCategory(req.params.id, req.body);
+  const category = await updateCategory(req.params.id as string, req.body);
   return sendSuccess(res, category, "Category updated successfully");
 });
 
 export const remove = catchAsync(async (req: Request, res: Response) => {
-  await softDeleteCategory(req.params.id);
+  await softDeleteCategory(req.params.id as string);
   return sendSuccess(res, {}, "Category deleted successfully");
 });

@@ -8,6 +8,7 @@ export const getDashboardStats = async () => {
     totalStaff,
     complaintsByStatus,
     complaintsByPriority,
+    overdueComplaints,
   ] = await prisma.$transaction([
     prisma.complaint.count({ where: { deletedAt: null } }),
     prisma.user.count({ where: { deletedAt: null } }),
@@ -15,11 +16,20 @@ export const getDashboardStats = async () => {
     prisma.user.count({ where: { deletedAt: null, role: "STAFF" } }),
     prisma.complaint.groupBy({
       by: ["status"],
+      orderBy: { status: "asc" },
       where: { deletedAt: null },
       _count: true,
     }),
+    prisma.complaint.count({
+      where: {
+        deletedAt: null,
+        slaDueAt: { lt: new Date() },
+        status: { notIn: ["RESOLVED", "REJECTED", "CLOSED"] },
+      },
+    }),
     prisma.complaint.groupBy({
       by: ["priority"],
+      orderBy: { priority: "asc" },
       where: { deletedAt: null },
       _count: true,
     }),
@@ -35,6 +45,7 @@ export const getDashboardStats = async () => {
       users: totalUsers,
       citizens: totalCitizens,
       staff: totalStaff,
+      overdueComplaints,
     },
     resolutionRate:
       totalComplaints > 0 ? ((resolvedCount / totalComplaints) * 100).toFixed(1) + "%" : "0%",

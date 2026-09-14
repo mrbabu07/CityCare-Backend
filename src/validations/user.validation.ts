@@ -6,3 +6,8 @@ export const updateProfileSchema = z.object({
     phone: z.string().optional(),
   }),
 });
+
+export const updateRoleSchema = z.object({
+  params: z.object({ id: z.string().uuid("Invalid user ID") }),
+  body: z.object({ role: z.enum(["CITIZEN", "STAFF", "ADMIN"]) }),
+});

@@ -15,3 +15,15 @@ export const loginSchema = z.object({
     password: z.string().min(1, "Password is required"),
   }),
 });
+
+export const refreshTokenSchema = z.object({
+  body: z.object({
+    refreshToken: z.string().min(1, "Refresh token is required"),
+  }),
+});
+
+export const googleLoginSchema = z.object({
+  body: z.object({
+    idToken: z.string().min(1, "Google ID token is required"),
+  }),
+});
