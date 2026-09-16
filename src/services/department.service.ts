@@ -47,10 +47,10 @@ export const updateDepartment = async (
 };
 
 export const softDeleteDepartment = async (id: string) => {
-    await getDepartmentById(id);
+  await getDepartmentById(id);
 
-    return prisma.department.update({
-        where: {id},
-        data: {deletedAt: new Date()},
-    })
-}
+  return prisma.department.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+};

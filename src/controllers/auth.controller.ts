@@ -1,8 +1,13 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../middlewares/errorHandler";
 import { sendSuccess } from "../utils/apiResponse";
-import { registerUser, loginUser, refreshAccessToken, revokeRefreshToken, googleLogin } from "../services/auth.service";
-
+import {
+  registerUser,
+  loginUser,
+  refreshAccessToken,
+  revokeRefreshToken,
+  googleLogin,
+} from "../services/auth.service";
 
 export const register = catchAsync(async (req: Request, res: Response) => {
   const result = await registerUser(req.body);

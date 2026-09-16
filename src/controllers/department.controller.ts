@@ -9,28 +9,27 @@ import {
   softDeleteDepartment,
 } from "../services/department.service";
 
-export const create = catchAsync(async (req: Request, res: Response)=>{
-    const department = await createDepartment(req.body);
-    return sendSuccess(res, department, "Department created successfully", 201);
-
+export const create = catchAsync(async (req: Request, res: Response) => {
+  const department = await createDepartment(req.body);
+  return sendSuccess(res, department, "Department created successfully", 201);
 });
 
 export const getAll = catchAsync(async (req: Request, res: Response) => {
-    const departments = await getAllDepartments();
-    return sendSuccess(res, departments, "Departments fetched successfully");
+  const departments = await getAllDepartments();
+  return sendSuccess(res, departments, "Departments fetched successfully");
 });
 
-export const getOne = catchAsync(async (req: Request, res: Response) =>{
-    const department = await getDepartmentById(req.params.id as string);
-    return sendSuccess(res, department, "Department fetched successfully");
+export const getOne = catchAsync(async (req: Request, res: Response) => {
+  const department = await getDepartmentById(req.params.id as string);
+  return sendSuccess(res, department, "Department fetched successfully");
 });
 
 export const update = catchAsync(async (req: Request, res: Response) => {
-    const department = await updateDepartment(req.params.id as string, req.body);
-    return sendSuccess(res, department, "Department updated successfully");
+  const department = await updateDepartment(req.params.id as string, req.body);
+  return sendSuccess(res, department, "Department updated successfully");
 });
 
-export const remove = catchAsync(async (req: Request, res: Response)=> {
-    await softDeleteDepartment(req.params.id as string);
-    return sendSuccess(res,  {}, "Department deleted successfully");
-})
+export const remove = catchAsync(async (req: Request, res: Response) => {
+  await softDeleteDepartment(req.params.id as string);
+  return sendSuccess(res, {}, "Department deleted successfully");
+});

@@ -48,7 +48,9 @@ export const getDashboardStats = async () => {
       overdueComplaints,
     },
     resolutionRate:
-      totalComplaints > 0 ? ((resolvedCount / totalComplaints) * 100).toFixed(1) + "%" : "0%",
+      totalComplaints > 0
+        ? ((resolvedCount / totalComplaints) * 100).toFixed(1) + "%"
+        : "0%",
     complaintsByStatus,
     complaintsByPriority,
   };
@@ -62,10 +64,15 @@ export const getAuditLogs = async (page = 1, limit = 20) => {
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
-      include: { actor: { select: { id: true, name: true, email: true, role: true } } },
+      include: {
+        actor: { select: { id: true, name: true, email: true, role: true } },
+      },
     }),
     prisma.auditLog.count(),
   ]);
 
-  return { logs, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  return {
+    logs,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
 };

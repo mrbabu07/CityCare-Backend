@@ -11,7 +11,10 @@ import {
   assertComplaintAccess,
 } from "../services/complaint.service";
 import { ComplaintStatus } from "@prisma/client";
-import { createAttachment, deleteAttachment } from "../services/attachment.service";
+import {
+  createAttachment,
+  deleteAttachment,
+} from "../services/attachment.service";
 
 export const create = catchAsync(async (req: Request, res: Response) => {
   const complaint = await createComplaint(req.user!.userId, req.body);
@@ -21,7 +24,6 @@ export const create = catchAsync(async (req: Request, res: Response) => {
 export const getAll = catchAsync(async (req: Request, res: Response) => {
   const { page, limit, status, departmentId, search } = req.query;
 
-  
   const filters: any = {
     page: page ? Number(page) : undefined,
     limit: limit ? Number(limit) : undefined,
@@ -50,13 +52,22 @@ export const updateStatus = catchAsync(async (req: Request, res: Response) => {
   const { status, note } = req.body;
   const existing = await getComplaintById(req.params.id as string);
   assertComplaintAccess(existing, req.user!);
-  const complaint = await updateComplaintStatus(req.params.id as string, status, req.user!.userId, note);
+  const complaint = await updateComplaintStatus(
+    req.params.id as string,
+    status,
+    req.user!.userId,
+    note,
+  );
   return sendSuccess(res, complaint, "Complaint status updated successfully");
 });
 
 export const assign = catchAsync(async (req: Request, res: Response) => {
   const { staffId } = req.body;
-  const complaint = await assignStaffToComplaint(req.params.id as string, staffId, req.user!.userId);
+  const complaint = await assignStaffToComplaint(
+    req.params.id as string,
+    staffId,
+    req.user!.userId,
+  );
   return sendSuccess(res, complaint, "Staff assigned successfully");
 });
 
@@ -65,20 +76,29 @@ export const remove = catchAsync(async (req: Request, res: Response) => {
   return sendSuccess(res, {}, "Complaint deleted successfully");
 });
 
-export const uploadAttachment = catchAsync(async (req: Request, res: Response) => {
-  const attachment = await createAttachment(
-    req.params.complaintId as string,
-    req.file,
-    req.user!,
-  );
-  return sendSuccess(res, attachment, "Attachment uploaded successfully", 201);
-});
+export const uploadAttachment = catchAsync(
+  async (req: Request, res: Response) => {
+    const attachment = await createAttachment(
+      req.params.complaintId as string,
+      req.file,
+      req.user!,
+    );
+    return sendSuccess(
+      res,
+      attachment,
+      "Attachment uploaded successfully",
+      201,
+    );
+  },
+);
 
-export const removeAttachment = catchAsync(async (req: Request, res: Response) => {
-  await deleteAttachment(
-    req.params.complaintId as string,
-    req.params.attachmentId as string,
-    req.user!,
-  );
-  return sendSuccess(res, {}, "Attachment deleted successfully");
-});
+export const removeAttachment = catchAsync(
+  async (req: Request, res: Response) => {
+    await deleteAttachment(
+      req.params.complaintId as string,
+      req.params.attachmentId as string,
+      req.user!,
+    );
+    return sendSuccess(res, {}, "Attachment deleted successfully");
+  },
+);

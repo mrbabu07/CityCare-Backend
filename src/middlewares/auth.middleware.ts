@@ -12,13 +12,20 @@ declare global {
   }
 }
 
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
+export const protect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     // ১. Header থেকে টোকেন বের করা
     const authHeader = req.headers.authorization; // ফরম্যাট: "Bearer <token>"
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new AppError("You are not logged in. Please log in to continue.", 401);
+      throw new AppError(
+        "You are not logged in. Please log in to continue.",
+        401,
+      );
     }
 
     const token = authHeader.slice(7).trim();
@@ -30,7 +37,9 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     const decoded = verifyAccessToken(token);
 
     // ৩. ইউজার এখনো ডাটাবেজে আছে এবং active কিনা চেক করা
-    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
 
     if (!user || !user.isActive || user.deletedAt) {
       throw new AppError("This user no longer exists or is inactive.", 401);
@@ -49,7 +58,9 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 export const authorize = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return next(new AppError("You do not have permission to perform this action.", 403));
+      return next(
+        new AppError("You do not have permission to perform this action.", 403),
+      );
     }
     next();
   };

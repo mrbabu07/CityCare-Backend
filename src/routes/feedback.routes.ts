@@ -7,6 +7,12 @@ import { complaintIdParamSchema } from "../validations/common.validation";
 
 const router = Router({ mergeParams: true });
 
-router.post("/", protect, authorize("CITIZEN"), validateRequest(createFeedbackSchema.and(complaintIdParamSchema)), create);
+router.post(
+  "/",
+  protect,
+  authorize("CITIZEN"),
+  validateRequest(createFeedbackSchema.and(complaintIdParamSchema)),
+  create,
+);
 
 export default router;

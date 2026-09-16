@@ -3,7 +3,6 @@ import { AppError } from "../utils/AppError";
 import { ComplaintStatus, ComplaintPriority, Prisma } from "@prisma/client";
 import { sendEmail } from "../utils/email";
 
-
 export const createComplaint = async (
   citizenId: string,
   data: {
@@ -17,7 +16,11 @@ export const createComplaint = async (
   },
 ) => {
   const category = await prisma.category.findFirst({
-    where: { id: data.categoryId, deletedAt: null },
+    where: {
+      id: data.categoryId,
+      deletedAt: null,
+      department: { deletedAt: null },
+    },
   });
 
   if (!category) {
@@ -27,29 +30,29 @@ export const createComplaint = async (
   const slaDueAt = new Date(Date.now() + category.slaHours * 60 * 60 * 1000);
 
   return prisma.$transaction(async (tx) => {
-  const complaint = await tx.complaint.create({
-    data: {
-      title: data.title,
-      description: data.description,
-      categoryId: data.categoryId,
-      departmentId: category.departmentId,
-      citizenId,
-      address: data.address,
-      latitude: data.latitude,
-      longitude: data.longitude,
-      priority: data.priority || ComplaintPriority.MEDIUM,
-      slaDueAt,
-    },
-  });
-  await tx.complaintStatusHistory.create({
-    data: {
-      complaintId: complaint.id,
-      toStatus: ComplaintStatus.SUBMITTED,
-      changedById: citizenId,
-      note: "Complaint submitted",
-    },
-  });
-  return complaint;
+    const complaint = await tx.complaint.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        categoryId: data.categoryId,
+        departmentId: category.departmentId,
+        citizenId,
+        address: data.address,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        priority: data.priority || ComplaintPriority.MEDIUM,
+        slaDueAt,
+      },
+    });
+    await tx.complaintStatusHistory.create({
+      data: {
+        complaintId: complaint.id,
+        toStatus: ComplaintStatus.SUBMITTED,
+        changedById: citizenId,
+        note: "Complaint submitted",
+      },
+    });
+    return complaint;
   });
 };
 export const getComplaintById = async (id: string) => {
@@ -83,7 +86,10 @@ export const assertComplaintAccess = (
     (user.role === "STAFF" && complaint.assignedToId === user.userId);
 
   if (!canAccess) {
-    throw new AppError("You do not have permission to access this complaint", 403);
+    throw new AppError(
+      "You do not have permission to access this complaint",
+      403,
+    );
   }
 };
 
@@ -163,6 +169,13 @@ export const updateComplaintStatus = async (
 
   const allowedNextStatuses = VALID_TRANSITIONS[complaint.status];
 
+  if (newStatus === ComplaintStatus.ASSIGNED && !complaint.assignedToId) {
+    throw new AppError(
+      "Assign an active staff member using the assignment endpoint first",
+      400,
+    );
+  }
+
   if (!allowedNextStatuses.includes(newStatus)) {
     throw new AppError(
       `Cannot change status from ${complaint.status} to ${newStatus}. Allowed: ${allowedNextStatuses.join(", ") || "none"}`,
@@ -171,8 +184,14 @@ export const updateComplaintStatus = async (
   }
 
   const updated = await prisma.$transaction(async (tx) => {
-    const updatedComplaint = await tx.complaint.update({
-      where: { id: complaintId },
+    const changed = await tx.complaint.updateMany({
+      where: {
+        id: complaintId,
+        status: complaint.status,
+        updatedAt: complaint.updatedAt,
+        assignedToId: complaint.assignedToId,
+        deletedAt: null,
+      },
       data: {
         status: newStatus,
         resolvedAt:
@@ -180,6 +199,12 @@ export const updateComplaintStatus = async (
             ? new Date()
             : complaint.resolvedAt,
       },
+    });
+
+    if (changed.count !== 1)
+      throw new AppError("Complaint changed; reload before updating", 409);
+    const updatedComplaint = await tx.complaint.findUniqueOrThrow({
+      where: { id: complaintId },
     });
 
     await tx.complaintStatusHistory.create({
@@ -191,7 +216,6 @@ export const updateComplaintStatus = async (
         note,
       },
     });
-
     await tx.auditLog.create({
       data: {
         actorId: changedById,
@@ -202,19 +226,24 @@ export const updateComplaintStatus = async (
       },
     });
 
-    if (newStatus === ComplaintStatus.RESOLVED || newStatus === ComplaintStatus.REJECTED) {
-    const citizen = await prisma.user.findUnique({ where: { id: complaint.citizenId } });
-    if (citizen) {
-      sendEmail(
-        citizen.email,
-        `Your complaint has been ${newStatus.toLowerCase()}`,
-        `<p>Hi ${citizen.name},</p>
+    if (
+      newStatus === ComplaintStatus.RESOLVED ||
+      newStatus === ComplaintStatus.REJECTED
+    ) {
+      const citizen = await prisma.user.findUnique({
+        where: { id: complaint.citizenId },
+      });
+      if (citizen) {
+        sendEmail(
+          citizen.email,
+          `Your complaint has been ${newStatus.toLowerCase()}`,
+          `<p>Hi ${citizen.name},</p>
          <p>Your complaint "<strong>${complaint.title}</strong>" has been marked as <strong>${newStatus}</strong>.</p>
          ${note ? `<p>Note: ${note}</p>` : ""}
-         <p>Thank you for using CityCare.</p>`
-      );
+         <p>Thank you for using CityCare.</p>`,
+        );
+      }
     }
-  }
 
     return updatedComplaint;
   });
@@ -248,9 +277,20 @@ export const assignStaffToComplaint = async (
   }
 
   const updated = await prisma.$transaction(async (tx) => {
-    const updatedComplaint = await tx.complaint.update({
-      where: { id: complaintId },
+    const changed = await tx.complaint.updateMany({
+      where: {
+        id: complaintId,
+        status: complaint.status,
+        updatedAt: complaint.updatedAt,
+        assignedToId: complaint.assignedToId,
+        deletedAt: null,
+      },
       data: { assignedToId: staffId, status: ComplaintStatus.ASSIGNED },
+    });
+    if (changed.count !== 1)
+      throw new AppError("Complaint changed; reload before assigning", 409);
+    const updatedComplaint = await tx.complaint.findUniqueOrThrow({
+      where: { id: complaintId },
     });
 
     await tx.complaintStatusHistory.create({

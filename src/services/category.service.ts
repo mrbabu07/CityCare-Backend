@@ -43,7 +43,7 @@ export const getCategoryById = async (id: string) => {
 
 export const updateCategory = async (
   id: string,
-  data: { name?: string; slaHours?: number }
+  data: { name?: string; slaHours?: number },
 ) => {
   await getCategoryById(id);
   return prisma.category.update({ where: { id }, data });
@@ -51,5 +51,8 @@ export const updateCategory = async (
 
 export const softDeleteCategory = async (id: string) => {
   await getCategoryById(id);
-  return prisma.category.update({ where: { id }, data: { deletedAt: new Date() } });
+  return prisma.category.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
 };

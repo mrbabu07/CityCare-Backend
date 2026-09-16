@@ -1,5 +1,14 @@
 import { Router } from "express";
-import { create, getAll, getOne, updateStatus, assign, remove, uploadAttachment, removeAttachment } from "../controllers/complaint.controller";
+import {
+  create,
+  getAll,
+  getOne,
+  updateStatus,
+  assign,
+  remove,
+  uploadAttachment,
+  removeAttachment,
+} from "../controllers/complaint.controller";
 import { protect, authorize } from "../middlewares/auth.middleware";
 import { validateRequest } from "../middlewares/validateRequest";
 import {
@@ -8,13 +17,23 @@ import {
   assignComplaintSchema,
   complaintListSchema,
 } from "../validations/complaint.validation";
-import { attachmentParamsSchema, complaintIdParamSchema, idParamSchema } from "../validations/common.validation";
+import {
+  attachmentParamsSchema,
+  complaintIdParamSchema,
+  idParamSchema,
+} from "../validations/common.validation";
 import feedbackRoutes from "./feedback.routes";
 import { uploadComplaintAttachment } from "../middlewares/upload.middleware";
 
 const router = Router();
 
-router.post("/", protect, authorize("CITIZEN"), validateRequest(createComplaintSchema), create);
+router.post(
+  "/",
+  protect,
+  authorize("CITIZEN"),
+  validateRequest(createComplaintSchema),
+  create,
+);
 router.get("/", protect, validateRequest(complaintListSchema), getAll);
 router.get("/:id", protect, validateRequest(idParamSchema), getOne);
 
@@ -23,7 +42,7 @@ router.patch(
   protect,
   authorize("STAFF", "ADMIN"),
   validateRequest(updateStatusSchema.and(idParamSchema)),
-  updateStatus
+  updateStatus,
 );
 
 router.patch(
@@ -31,10 +50,16 @@ router.patch(
   protect,
   authorize("ADMIN"),
   validateRequest(assignComplaintSchema),
-  assign
+  assign,
 );
 
-router.delete("/:id", protect, authorize("ADMIN"), validateRequest(idParamSchema), remove);
+router.delete(
+  "/:id",
+  protect,
+  authorize("ADMIN"),
+  validateRequest(idParamSchema),
+  remove,
+);
 router.post(
   "/:complaintId/attachments",
   protect,
@@ -49,6 +74,5 @@ router.delete(
   removeAttachment,
 );
 router.use("/:complaintId/feedback", feedbackRoutes);
-
 
 export default router;

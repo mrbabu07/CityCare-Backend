@@ -1,17 +1,25 @@
 import { prisma } from "../config/prisma";
 import { hashPassword, comparePassword } from "../utils/password";
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt";
 import { AppError } from "../utils/AppError";
 import { OAuth2Client } from "google-auth-library";
 import { createHash } from "node:crypto";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+const hashToken = (token: string) =>
+  createHash("sha256").update(token).digest("hex");
 
 const createSession = async (user: { id: string; role: string }) => {
   const accessToken = generateAccessToken({ userId: user.id, role: user.role });
-  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({
+    userId: user.id,
+    role: user.role,
+  });
   const decoded = verifyRefreshToken(refreshToken);
 
   if (!decoded.exp) throw new AppError("Refresh token expiry is missing", 500);
@@ -46,7 +54,9 @@ export const googleLogin = async (idToken: string) => {
   let user = await prisma.user.findUnique({ where: { email: payload.email } });
 
   if (!user) {
-    const randomPassword = await hashPassword(Math.random().toString(36) + Date.now());
+    const randomPassword = await hashPassword(
+      Math.random().toString(36) + Date.now(),
+    );
     user = await prisma.user.create({
       data: {
         name: payload.name || "Google User",
@@ -130,7 +140,10 @@ export const refreshAccessToken = async (token: string) => {
   try {
     decoded = verifyRefreshToken(token);
   } catch {
-    throw new AppError("Invalid or expired refresh token, Please login again", 401);
+    throw new AppError(
+      "Invalid or expired refresh token, Please login again",
+      401,
+    );
   }
 
   const storedToken = await prisma.refreshToken.findUnique({
@@ -155,7 +168,10 @@ export const refreshAccessToken = async (token: string) => {
   }
 
   const accessToken = generateAccessToken({ userId: user.id, role: user.role });
-  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({
+    userId: user.id,
+    role: user.role,
+  });
   const nextDecoded = verifyRefreshToken(refreshToken);
   const nextExpiry = nextDecoded.exp;
   if (!nextExpiry) throw new AppError("Refresh token expiry is missing", 500);

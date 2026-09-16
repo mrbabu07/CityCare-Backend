@@ -30,7 +30,15 @@ Refresh tokens are stored only as hashes. `POST /api/v1/auth/refresh` rotates th
 
 ## Quality checks
 
-Run `npm test`. All errors use `{ success: false, message, errors }`; successes use `{ success: true, message, data }`.
+Run `npm test` for build, HTTP validation, payment signature/replay/concurrency, and complaint workflow regression checks. The payment tests mock the provider and database; they do not replace an actual SSLCommerz sandbox checkout.
+
+Run `npm run format:check` to check formatting, or `npm run format` to apply Prettier.
+
+All errors use `{ success: false, message, errors }`; successes use `{ success: true, message, data }`.
+
+Payment callbacks return JSON. Failure/cancellation and IPN payloads must carry a valid SSLCommerz signature; successful payments additionally require provider-side validation of the transaction, amount and currency. Failed payments can be retried with a new gateway transaction ID. Pending sessions reuse their checkout URL; a session with an uncertain gateway response stays pending for reconciliation instead of creating a second charge. Late failure notifications cannot downgrade a paid payment. `/payments/result` is informational only; use the authenticated payment-status endpoint to confirm payment.
+
+Google sign-in and successful SSLCommerz checkout still require end-to-end verification with the configured external accounts before claiming full submission readiness.
 
 Never commit `.env` or submit personal credentials. Use the dedicated `DEMO_ADMIN_EMAIL` and `DEMO_ADMIN_PASSWORD` values when evaluating the project.
 

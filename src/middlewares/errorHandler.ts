@@ -15,7 +15,7 @@ export const globalErrorHandler = (
   err: unknown,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   if (err instanceof ZodError) {
     return res.status(400).json({
@@ -39,7 +39,10 @@ export const globalErrorHandler = (
   if (err instanceof multer.MulterError) {
     return res.status(400).json({
       success: false,
-      message: err.code === "LIMIT_FILE_SIZE" ? "File must be 4 MB or smaller" : err.message,
+      message:
+        err.code === "LIMIT_FILE_SIZE"
+          ? "File must be 4 MB or smaller"
+          : err.message,
       errors: [],
     });
   }
@@ -54,7 +57,9 @@ export const globalErrorHandler = (
       });
     }
     if (prismaErr.code === "P2025") {
-      return res.status(404).json({ success: false, message: "Record not found", errors: [] });
+      return res
+        .status(404)
+        .json({ success: false, message: "Record not found", errors: [] });
     }
   }
 

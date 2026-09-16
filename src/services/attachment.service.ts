@@ -16,7 +16,8 @@ const uploadBuffer = (file: Express.Multer.File) =>
         unique_filename: true,
       },
       (error, result) => {
-        if (error || !result) return reject(error || new Error("Cloudinary upload failed"));
+        if (error || !result)
+          return reject(error || new Error("Cloudinary upload failed"));
         resolve(result);
       },
     );
@@ -80,7 +81,10 @@ export const deleteAttachment = async (
   if (!attachment) throw new AppError("Attachment not found", 404);
 
   if (user.role !== "ADMIN" && attachment.uploadedById !== user.userId) {
-    throw new AppError("Only the uploader or an admin can delete this attachment", 403);
+    throw new AppError(
+      "Only the uploader or an admin can delete this attachment",
+      403,
+    );
   }
 
   if (attachment.publicId) {

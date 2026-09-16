@@ -2,7 +2,6 @@ import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { createAuditLog } from "../utils/auditLog";
 
-
 export const getMyProfile = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -27,15 +26,14 @@ export const getMyProfile = async (userId: string) => {
 export const updateUserRole = async (
   targetUserId: string,
   newRole: "CITIZEN" | "STAFF" | "ADMIN",
-  actorId: string 
+  actorId: string,
 ) => {
   const targetUser = await prisma.user.findFirst({
-    where: {id: targetUserId, deletedAt: null },
+    where: { id: targetUserId, deletedAt: null },
   });
 
-  if(!targetUser) {
+  if (!targetUser) {
     throw new AppError("User not found", 404);
-
   }
 
   const updated = await prisma.user.update({
@@ -43,18 +41,18 @@ export const updateUserRole = async (
     data: { role: newRole },
   });
   await createAuditLog({
-    actorId, 
+    actorId,
     action: "ROLE_CHANGE",
     entityType: "User",
     entityId: targetUserId,
     metadata: { oldRole: targetUser.role, newRole },
   });
   return updated;
-}
+};
 
 export const updateMyProfile = async (
   userId: string,
-  data: { name?: string; phone?: string }
+  data: { name?: string; phone?: string },
 ) => {
   const user = await prisma.user.update({
     where: { id: userId },

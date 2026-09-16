@@ -7,6 +7,12 @@ import { paginationSchema } from "../validations/common.validation";
 const router = Router();
 
 router.get("/dashboard-stats", protect, authorize("ADMIN"), dashboardStats);
-router.get("/audit-logs", protect, authorize("ADMIN"), validateRequest(paginationSchema), auditLogs);
+router.get(
+  "/audit-logs",
+  protect,
+  authorize("ADMIN"),
+  validateRequest(paginationSchema),
+  auditLogs,
+);
 
 export default router;
