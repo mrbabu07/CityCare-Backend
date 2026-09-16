@@ -39,6 +39,16 @@ export const updateUserRole = async (
   const updated = await prisma.user.update({
     where: { id: targetUserId },
     data: { role: newRole },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
   await createAuditLog({
     actorId,
