@@ -11,6 +11,7 @@ import {
   assertComplaintAccess,
 } from "../services/complaint.service";
 import { ComplaintStatus } from "@prisma/client";
+import { createAttachment, deleteAttachment } from "../services/attachment.service";
 
 export const create = catchAsync(async (req: Request, res: Response) => {
   const complaint = await createComplaint(req.user!.userId, req.body);
@@ -62,4 +63,22 @@ export const assign = catchAsync(async (req: Request, res: Response) => {
 export const remove = catchAsync(async (req: Request, res: Response) => {
   await softDeleteComplaint(req.params.id as string);
   return sendSuccess(res, {}, "Complaint deleted successfully");
+});
+
+export const uploadAttachment = catchAsync(async (req: Request, res: Response) => {
+  const attachment = await createAttachment(
+    req.params.complaintId as string,
+    req.file,
+    req.user!,
+  );
+  return sendSuccess(res, attachment, "Attachment uploaded successfully", 201);
+});
+
+export const removeAttachment = catchAsync(async (req: Request, res: Response) => {
+  await deleteAttachment(
+    req.params.complaintId as string,
+    req.params.attachmentId as string,
+    req.user!,
+  );
+  return sendSuccess(res, {}, "Attachment deleted successfully");
 });

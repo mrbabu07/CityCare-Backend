@@ -6,6 +6,8 @@ CityCare is a REST API for reporting and resolving city complaints. Citizens sub
 
 Node.js, TypeScript, Express, PostgreSQL, Prisma, Zod, JWT, Google Identity, SSLCommerz, Nodemailer, Helmet and rate limiting.
 
+Complaint evidence uploads use Multer memory storage and Cloudinary. Accepted files are JPEG, PNG, WebP, and PDF up to 4 MB to stay within Vercel's request limit.
+
 ## Setup
 
 1. Copy `.env.example` to `.env` and set real credentials.

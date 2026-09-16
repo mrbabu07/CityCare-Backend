@@ -8,6 +8,13 @@ export const complaintIdParamSchema = z.object({
   params: z.object({ complaintId: z.string().uuid("Invalid complaint ID") }),
 });
 
+export const attachmentParamsSchema = z.object({
+  params: z.object({
+    complaintId: z.string().uuid("Invalid complaint ID"),
+    attachmentId: z.string().uuid("Invalid attachment ID"),
+  }),
+});
+
 export const paginationSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().positive().optional(),

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { AppError } from "../utils/AppError";
+import multer from "multer";
 
 export const notFoundHandler = (req: Request, res: Response) => {
   res.status(404).json({
@@ -32,6 +33,14 @@ export const globalErrorHandler = (
       success: false,
       message: err.message,
       errors: err.errors,
+    });
+  }
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      success: false,
+      message: err.code === "LIMIT_FILE_SIZE" ? "File must be 4 MB or smaller" : err.message,
+      errors: [],
     });
   }
 

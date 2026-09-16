@@ -145,6 +145,31 @@ paths:
       parameters: [{ name: complaintId, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [rating], properties: { rating: { type: integer, minimum: 1, maximum: 5 }, comment: { type: string } } } } } }
       responses: { '201': { $ref: '#/components/responses/Success' } }
+  /complaints/{complaintId}/attachments:
+    post:
+      tags: [Complaints]
+      summary: Upload an image or PDF attachment to an authorized complaint
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: complaintId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: "JPEG, PNG, WebP, or PDF; maximum 4 MB" }
+      responses: { '201': { $ref: '#/components/responses/Success' }, '400': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
+  /complaints/{complaintId}/attachments/{attachmentId}:
+    delete:
+      tags: [Complaints]
+      summary: Delete an attachment as its uploader or an admin
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: complaintId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: attachmentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses: { '200': { $ref: '#/components/responses/Success' }, '403': { $ref: '#/components/responses/Error' }, '404': { $ref: '#/components/responses/Error' } }
   /payments/initiate:
     post:
       tags: [Payments]

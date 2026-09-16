@@ -33,6 +33,7 @@ model User {
   auditLogs                AuditLog[]
   payments                 Payment[]
   refreshTokens            RefreshToken[]
+  attachments              Attachment[]
 
   @@index([role])
 }
@@ -158,14 +159,18 @@ model ComplaintStatusHistory {
 }
 
 model Attachment {
-  id          String    @id @default(uuid())
-  complaintId String
-  complaint   Complaint @relation(fields: [complaintId], references: [id])
-  url         String
-  type        String
-  createdAt   DateTime  @default(now())
+  id           String    @id @default(uuid())
+  complaintId  String
+  complaint    Complaint @relation(fields: [complaintId], references: [id])
+  uploadedById String?
+  uploadedBy   User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  url          String
+  publicId     String?   @unique
+  type         String
+  createdAt    DateTime  @default(now())
 
   @@index([complaintId])
+  @@index([uploadedById])
 }
 
 model Feedback {
