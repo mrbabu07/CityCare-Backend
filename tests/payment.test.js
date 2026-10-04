@@ -7,6 +7,7 @@ const unexpected = async () => {
 };
 const prisma = {
   payment: {
+    create: unexpected,
     findUnique: unexpected,
     findFirst: unexpected,
     findUniqueOrThrow: unexpected,
@@ -29,6 +30,32 @@ const payment = {
   status: "PENDING",
   gatewayTransactionId: "attempt-1",
 };
+
+test("checkout uses a provider-compatible unique transaction ID", async () => {
+  mock.method(prisma.complaint, "findFirst", async () => ({
+    citizenId: "citizen-1",
+    address: "Test road",
+    citizen: { name: "Test", email: "test@example.com" },
+  }));
+  mock.method(prisma.payment, "findUnique", async () => null);
+  mock.method(prisma.payment, "create", async ({ data }) => {
+    assert.match(data.gatewayTransactionId, /^[a-f0-9]{30}$/);
+    return { ...data, id: "payment-1" };
+  });
+  mock.method(prisma.payment, "updateMany", async () => ({ count: 1 }));
+  mock.method(global, "fetch", async (_url, options) => {
+    assert.equal(options.body.get("tran_id").length, 30);
+    return new Response(
+      JSON.stringify({ GatewayPageURL: "https://sandbox.sslcommerz.com/test" }),
+      { status: 200 },
+    );
+  });
+  const result = await paymentService.initiatePayment(
+    "complaint-1",
+    "citizen-1",
+  );
+  assert.equal(result.paymentId, "payment-1");
+});
 function notification(overrides = {}) {
   const data = {
     tran_id: "attempt-1",

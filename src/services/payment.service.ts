@@ -1,7 +1,7 @@
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { PaymentStatus } from "@prisma/client";
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 const store_id = process.env.SSLCOMMERZ_STORE_ID as string;
 const store_passwd = process.env.SSLCOMMERZ_STORE_PASSWORD as string;
@@ -50,7 +50,8 @@ export const initiatePayment = async (complaintId: string, userId: string) => {
     );
   }
 
-  const gatewayTransactionId = randomUUID();
+  // SSLCommerz accepts transaction IDs up to 30 characters.
+  const gatewayTransactionId = randomBytes(15).toString("hex");
   const payment = existingPayment
     ? await prisma.payment
         .updateMany({
