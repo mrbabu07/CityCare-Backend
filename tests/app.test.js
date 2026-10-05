@@ -30,6 +30,18 @@ test("health and structured 404 responses", async (t) => {
 
   for (const [path, options, status] of [
     [
+      "/api/v1/payments/cancel/00000000-0000-4000-8000-000000000001",
+      {
+        method: "POST",
+        headers: {
+          Origin: "https://sandbox.sslcommerz.com",
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+      },
+      400,
+    ],
+    [
       "/api/v1/payments/webhook",
       {
         method: "POST",

@@ -24,13 +24,26 @@ const allowedOrigins = (process.env.CORS_ORIGIN || "")
 
 app.use(helmet());
 app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin))
-        return callback(null, true);
-      return callback(new Error("Origin is not allowed by CORS"));
-    },
-    credentials: true,
+  cors<Request>((req, done) => {
+    const gatewayCallback =
+      req.method === "POST" &&
+      /^\/api\/v1\/payments\/(success|fail|cancel)\/[a-f0-9-]+$/i.test(
+        req.path,
+      );
+    done(null, {
+      origin(origin, callback) {
+        const trustedGateway =
+          gatewayCallback &&
+          [
+            "https://sandbox.sslcommerz.com",
+            "https://securepay.sslcommerz.com",
+          ].includes(origin || "");
+        if (!origin || allowedOrigins.includes(origin) || trustedGateway)
+          return callback(null, true);
+        return callback(new Error("Origin is not allowed by CORS"));
+      },
+      credentials: true,
+    });
   }),
 );
 app.use(express.json());
